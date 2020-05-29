@@ -16,6 +16,7 @@
       :success-messages="nameSuccess"
       :messages="nameMessages"
       @keyup="validateName($event)"
+      @input="validateName($event)"
     />
     <v-text-field
       v-if="nameExists"
