@@ -14,7 +14,7 @@
             :outlined="!isFollowed"
             dense
             rounded
-            style="float: right"
+            style="float: right;"
             >{{ isFollowed ? 'Following' : 'Follow' }}</v-btn
           ></v-list-item-title
         >
@@ -35,6 +35,6 @@
 <script>
 export default {
   name: 'Usercard',
-  props: { isFollowed: Boolean }
+  props: { isFollowed: Boolean },
 }
 </script>

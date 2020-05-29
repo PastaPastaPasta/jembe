@@ -1,17 +1,19 @@
 <template>
   <v-btn
-    style="border-top-left-radius: 13px;
-    border-bottom-right-radius: 13px;
-    border-top-right-radius: 1px;
-    border-bottom-left-radius: 1px;"
+    style="
+      border-top-left-radius: 13px;
+      border-bottom-right-radius: 13px;
+      border-top-right-radius: 1px;
+      border-bottom-left-radius: 1px;
+    "
     large
     class="ml-2 mb-4"
     color="primary"
     :disabled="!this.$store.state.name.isValid"
     :loading="this.$store.state.isSyncing"
-    @click="enter()"
+    @click="onboard()"
   >
-    Login
+    {{ this.$store.state.onboardText }}
   </v-btn>
 </template>
 
@@ -24,14 +26,7 @@ export default {
   },
   computed: {},
   methods: {
-    ...mapActions(['registerNameOnceBalance']),
-    signUp() {
-      this.$store.commit('setSyncing', true)
-      this.registerNameOnceBalance()
-    },
-    enter() {
-      this.$router.push('/discover')
-    }
-  }
+    ...mapActions(['registerNameOnceBalance', 'onboard']),
+  },
 }
 </script>

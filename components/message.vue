@@ -1,9 +1,9 @@
 <template>
   <v-card class="pa-4 mx-auto my-10" max-width="600">
     <v-textarea
+      v-model="jamText"
       name="input-7-1"
       label="Your message"
-      value=""
       hint=""
       solo
       flat
@@ -27,12 +27,15 @@
       <v-divider class="mx-4" vertical></v-divider>
 
       <v-btn
-        style="border-top-left-radius: 13px;
-    border-bottom-right-radius: 13px;
-    border-top-right-radius: 1px;
-    border-bottom-left-radius: 1px;"
+        style="
+          border-top-left-radius: 13px;
+          border-bottom-right-radius: 13px;
+          border-top-right-radius: 1px;
+          border-bottom-left-radius: 1px;
+        "
         color="primary"
         :disabled="!textValid.isValid"
+        @click.prevent="postJam(jamText)"
         >Tweet</v-btn
       >
     </v-card-actions>
@@ -40,20 +43,31 @@
 </template>
 
 <script>
+// eslint-disable-next-line no-unused-vars
+import { mapActions, mapGetters } from 'vuex'
+
 export default {
   data() {
     return {
+      jamText: '',
       textValid: {
         number: '',
         color: 'primary',
         value: 0,
         width: 2,
         backgroundcolor: 'white',
-        isValid: false
-      }
+        isValid: false,
+      },
     }
   },
   methods: {
+    ...mapActions(['sendJam', 'fetchJams', 'refreshLikesInState']),
+    async postJam() {
+      await this.sendJam(this.jamText)
+      await this.fetchJams({ orderBy: [['timestamp', 'desc']] })
+      await this.refreshLikesInState()
+    },
+
     validateText(event) {
       //   console.log({ event })
       //   console.log(event.srcElement.textLength)
@@ -92,7 +106,7 @@ export default {
       } else {
         this.textValid.width = 2
       }
-    }
-  }
+    },
+  },
 }
 </script>

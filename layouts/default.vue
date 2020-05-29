@@ -21,7 +21,7 @@
           </v-list-item-action>
           <v-list-item-content>
             <v-list-item-title
-              style="font-family: 'Montserrat', sans-serif; font-size: 1.5rem"
+              style="font-family: 'Montserrat', sans-serif; font-size: 1.5rem;"
               v-text="item.title"
             />
           </v-list-item-content>
@@ -46,7 +46,7 @@
       </a>
 
       <v-toolbar-title
-        style="font-family: 'Montserrat', sans-serif;font-size: 1.5rem"
+        style="font-family: 'Montserrat', sans-serif; font-size: 1.5rem;"
         v-text="title"
       />
 
@@ -85,7 +85,7 @@
                 <v-list-item-title>My Profile </v-list-item-title>
               </v-list-item-content>
             </v-list-item>
-            <v-list-item dense router exact @click="goto('/')">
+            <v-list-item dense router exact @click="logout()">
               <v-list-item-content>
                 <v-list-item-title>Logout </v-list-item-title>
               </v-list-item-content>
@@ -104,6 +104,7 @@
 <script>
 // eslint-disable-next-line no-unused-vars
 import { mapActions, mapGetters } from 'vuex'
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export default {
   data() {
@@ -112,49 +113,81 @@ export default {
         {
           icon: '',
           title: 'Home',
-          to: '/'
+          to: '/',
         },
         {
           icon: '',
           title: 'Profile',
-          to: '/me'
+          to: '/profile',
         },
         {
           icon: '',
           title: 'Users',
-          to: '/users'
+          to: '/users',
         },
         {
           icon: '',
           title: 'Logout',
-          to: '/logout'
-        }
+          to: '/logout',
+        },
       ],
       title: 'Jembe',
-      drawer: false
+      drawer: false,
     }
   },
   computed: {
     userName() {
       return this.$store.state.name.label
+      // return 'username'
     },
     isIndexRoute() {
       const isIndex = this.$route.name === 'index'
       console.log({ isIndex })
       return isIndex
-    }
+    },
   },
   async created() {
-    await this.initWallet()
+    // await this.initWallet()
+    await this.initOrCreateAccount({})
+    this.loopSyncDelegatedCredentials() // TODO phaseb, launch this userId specific after name entry
   },
-  mounted() {
-    console.log(this.$route)
-  },
+  mounted() {},
   methods: {
-    ...mapActions(['initWallet']),
+    ...mapActions([
+      // 'initWallet',
+      'initOrCreateAccount',
+      'syncDelegatedCredentials',
+      'resetStateKeepAccounts',
+    ]),
+    logout() {
+      this.resetStateKeepAccounts()
+      this.$router.push('/')
+      this.initOrCreateAccount({})
+    },
     goto(route) {
       this.$router.push(route)
-    }
-  }
+    },
+    async loopSyncDelegatedCredentials() {
+      console.log('loopSyncDelegatedCredentials()')
+      await this.syncDelegatedCredentials()
+
+      console.log(
+        'Login state: state.delegatedCredentials',
+        this.$store.state.delegatedCredential
+      )
+
+      // State change to LoggedIn
+      if (this.$store.state.delegatedCredential && this.isIndexRoute) {
+        this.$router.push('/discover')
+      }
+
+      // State change to LoggedOut
+      if (!this.$store.state.delegatedCredential && !this.isIndexRoute) {
+        this.logout()
+      }
+      await sleep(5000)
+      this.loopSyncDelegatedCredentials()
+    },
+  },
 }
 </script>

@@ -1,0 +1,243 @@
+{
+    "Signup": {
+        "indices": [
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "accountDocId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "isRegistered": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": true,
+                "properties": [
+                    {
+                        "unixTimestamp": "desc"
+                    }
+                ]
+            }
+        ],
+        "required": [
+            "accountDocId",
+            "contractId",
+            "unixTimestamp",
+            "dappName",
+            "dappIcon",
+            "isRegistered"
+        ],
+        "properties": {
+            "dappIcon": {
+                "type": "string"
+            },
+            "dappName": {
+                "type": "string"
+            },
+            "contractId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "accountDocId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "isRegistered": {
+                "type": "boolean"
+            },
+            "unixTimestamp": {
+                "type": "integer"
+            }
+        },
+        "additionalProperties": false
+    },
+    "PaymentRequest": {
+        "indices": [
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "accountDocId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "contractId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": true,
+                "properties": [
+                    {
+                        "unixTimestamp": "asc"
+                    }
+                ]
+            }
+        ],
+        "required": [
+            "toAddress",
+            "satoshis"
+        ],
+        "properties": {
+            "uidPin": {
+                "type": "string"
+            },
+            "dappName": {
+                "type": "string"
+            },
+            "satoshis": {
+                "type": "string"
+            },
+            "toAddress": {
+                "type": "string"
+            },
+            "contractId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "accountDocId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "unixTimestamp": {
+                "type": "integer"
+            }
+        },
+        "additionalProperties": false
+    },
+    "DelegatedCredentials": {
+        "indices": [
+            {
+                "unique": true,
+                "properties": [
+                    {
+                        "pubKey": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "delegateIdentityId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "unixTimestampExpiration": "asc"
+                    }
+                ]
+            }
+        ],
+        "required": [
+            "unixTimestampExpiration",
+            "pubKey",
+            "encPvtKey",
+            "delegateIdentityId"
+        ],
+        "properties": {
+            "pubKey": {
+                "type": "string"
+            },
+            "encPvtKey": {
+                "type": "string"
+            },
+            "delegateIdentityId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "unixTimestampExpiration": {
+                "type": "integer"
+            }
+        },
+        "additionalProperties": false
+    },
+    "DocumentActionRequest": {
+        "indices": [
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "accountDocId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": false,
+                "properties": [
+                    {
+                        "contractId": "asc"
+                    }
+                ]
+            },
+            {
+                "unique": true,
+                "properties": [
+                    {
+                        "unixTimestamp": "asc"
+                    }
+                ]
+            }
+        ],
+        "properties": {
+            "action": {
+                "enum": [
+                    "read",
+                    "create",
+                    "update",
+                    "delete"
+                ],
+                "type": "string"
+            },
+            "uidPin": {
+                "type": "string"
+            },
+            "dappName": {
+                "type": "string"
+            },
+            "contractId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "accountDocId": {
+                "type": "string",
+                "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+                "maxLength": 44,
+                "minLength": 42
+            },
+            "JSONDocString": {
+                "type": "string"
+            },
+            "unixTimestamp": {
+                "type": "integer"
+            }
+        },
+        "additionalProperties": false
+    }
+}

@@ -1,5 +1,5 @@
 <template>
-  <v-container style="maxWidth: 700px;">
+  <v-container style="maxwidth: 700px;">
     <v-card flat class="my-2">
       <v-img :src="require('~/assets/avataaar.png')" height="194"></v-img>
       <v-list-item>
@@ -13,7 +13,7 @@
               outlined
               dense
               rounded
-              style="float: right"
+              style="float: right;"
               >Set up Profile</v-btn
             ></v-list-item-title
           >
@@ -46,24 +46,24 @@
         Likes
       </v-tab>
       <v-tab-item>
-        <Tweet />
-        <Tweet />
-        <Tweet />
+        <!-- <Tweet /> -->
+        <!-- <Tweet /> -->
+        <!-- <Tweet /> -->
       </v-tab-item>
       <v-tab-item>
-        <v-container fluid style="maxWidth: 600px; display: flex">
+        <v-container fluid style="maxwidth: 600px; display: flex;">
           <Usercard is-followed />
         </v-container>
       </v-tab-item>
       <v-tab-item>
         <v-card flat tile>
-          <v-container fluid style="maxWidth: 600px; display: flex">
+          <v-container fluid style="maxwidth: 600px; display: flex;">
             <Usercard is-followed />
           </v-container>
         </v-card>
       </v-tab-item>
       <v-tab-item>
-        <Tweet is-liked />
+        <!-- <Tweet is-liked /> -->
       </v-tab-item>
     </v-tabs>
   </v-container>
@@ -74,6 +74,7 @@ import Tweet from '~/components/tweet'
 import Usercard from '~/components/usercard'
 
 export default {
-  components: { Tweet, Usercard }
+  // eslint-disable-next-line vue/no-unused-components
+  components: { Tweet, Usercard },
 }
 </script>

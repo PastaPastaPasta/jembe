@@ -24,6 +24,6 @@ import Headline from './Headline'
 import Subline from './Subline'
 
 export default {
-  components: { NameField, NameButton, Headline, Subline }
+  components: { NameField, NameButton, Headline, Subline },
 }
 </script>

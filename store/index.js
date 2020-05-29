@@ -1,308 +1,715 @@
-/* eslint-disable camelcase */
-// /* eslint-disable prettier/prettier */
 import Dash from 'dash'
-const DashmachineCrypto = require('dashmachine-crypto')
+import Vue from 'vue'
+import { encrypt } from 'dashmachine-crypto'
+const $dappName = 'Jembe'
+const $dappIcon = ''
+
+// Helper Function
+// TODO move to helper module
+const timestamp = () => Math.floor(Date.now() / 1000)
+
+//
+// Cache identity lookups to speed up UX by avoiding to hit dapi multiple times
+//
+
+const IdentitiesCache = {}
+
+// eslint-disable-next-line no-unused-vars
+const cachedOrGetIdentity = async (client, identityId) => {
+  console.log(
+    'Checking IdentitiesCache for known identities using IdentityId',
+    identityId
+  )
+  let identity
+  if (identityId in IdentitiesCache) {
+    identity = IdentitiesCache[identityId]
+    console.log('Found existing cached identity', identity)
+  } else {
+    identity = await client.platform.identities.get(identityId)
+    IdentitiesCache[identity.id] = identity
+    console.log('Fetched unknown identity', identity)
+  }
+  console.log({ IdentitiesCache })
+  return identity
+}
+
+//
+//
 
 let client
-let clientTimeoutIntervall
+let clientTimeout
 let registerIdentityInterval
-let registerNameInterval
-let loginPinInterval
 
 // mnemonic: "come sight trade detect travel hazard suit rescue special clip choose crouch"
-
-export const state = () => ({
-  //     isClientError : false,
-  // isSyncing: false,
-  //     mnemonic: "know cannon truth test sort few above drama client road scatter scrap",//null, // "drastic raise hurry step always person bundle end humble toss estate inner",
-  //     identityId: "GrkDFuUUuxfvcVTjU8mhuaEx3acaY8FE1DTRyLLFyWhi",
-  //     loginPin: "",
-  //     loginPinTimeLeft: 0,
-  //     wdsContractId: "9GHRxvyYDmWz7pBKRjPnxjsJbbgKLngtejWWp3kEY1vB", // TODO make wds vars dynamic / derive them
-  //     wdsVendorId: "Aobc5KKaA4ZqzP7unc6WawQXQEK2S3y6EwrmvJLLn1ui",
-  //     wdsLastDoc: undefined,
-  //     name: {
-  //         label: 'polldancer',
-  //         isRegistered: true,
-  //         docId:"9KB3o1TTHiwqTLuHVPKzxJb7H4CmRfWEHRUjuU4tEGD7"
-  //     },
-  //     snackbar: {
-  //     }
-  //     // mnemonic: "orphan bean draw casual parrot crack pool filter fault cannon dinosaur someone"
-  // })
-  isClientError: false,
-  isSyncing: false,
-  // mnemonic: null, // "drastic raise hurry step always person bundle end humble toss estate inner",
-  mnemonic:
-    'olympic dance spider bid soap butter cradle penalty waste sand situate vessel',
-  // mnemonic: undefined,
-  identityId: null,
-  loginPin: '',
-  loginPinTimeLeft: 0,
-  wdsContractId: 'DBVuaTbU8PY9weNrg8RZPerNnv4oEdRWwSa4qXUG7ji4',
-  wdsVendorId: '2JwFfLfCk8m139U778HzLA315s8BDXEBARyWEbEnrdbs',
-  wdsLastDoc: undefined,
-  name: {
-    label: null,
-    isRegistered: false,
-    isValid: false,
-    docId: null
-  },
-  snackbar: {}
-  // mnemonic: "orphan bean draw casual parrot crack pool filter fault cannon dinosaur someone"
-})
-
-// // export const mutations = {
-// // }
-
-export const getters = {
-  freshAddress() {
-    const address = client.account.getUnusedAddress().address
-    return address
-  },
-  async confirmedBalance() {
-    // TODO weird thing: this function fires before await initWallet() resolves
-    // console.log("get balance not ready Confirmed Balance", client.account.getConfirmedBalance());
-    // console.log("get balance not ready Unconfirmed Balance", client.account.getUnconfirmedBalance());
-    await client.isReady()
-    console.log(
-      'get balance Confirmed Balance',
-      client.account.getConfirmedBalance()
-    )
-    console.log(
-      'get balance Unconfirmed Balance',
-      client.account.getUnconfirmedBalance()
-    )
-    return client.account.getConfirmedBalance()
-  },
-  setupFinished(state) {
-    console.log(state)
-    return state.mnemonic && state.identityId
+const getInitState = () => {
+  console.log('getinitstate')
+  return {
+    fundingAddress: '',
+    // mnemonic:
+    //   'laugh document air fire humble vessel language push blush wrist cancel safe',
+    mnemonic: null,
+    // identityId: 'BUvY3Lxd7giT7jJgmJpkpnPGdUmh78u26woydmF82oKn',
+    identityId: null,
+    tmpPrivKey: '',
+    delegatedCredential: {},
+    accounts: [],
+    name: {
+      label: '',
+      isValid: false,
+      userId: '',
+      uidPin: '',
+      identityId: '',
+      identity: {},
+      userPubKey: '',
+    }, // TODO replace with accounts, name -> user
+    onboardText: 'Sign Up',
+    onboardType: 'signup',
+    jams: [],
+    follows: {},
+    isClientError: false,
+    isSyncing: false,
   }
 }
+export const state = () => getInitState()
+
+export const getters = {
+  getJams(state) {
+    return state.jams
+  },
+  getFollows(state) {
+    return state.follows
+  },
+}
 export const mutations = {
+  setState(state, newState) {
+    console.log('setstate')
+    this.replaceState(newState)
+  },
+  setFundingAddress(state, address) {
+    console.log('setting funding address', address)
+    state.fundingAddress = address
+  },
+  setIdentity(state, identityId) {
+    state.identityId = identityId
+  },
+  setTmpPrivKey(state, tmpPrivKey) {
+    state.tmpPrivKey = tmpPrivKey
+  },
+  setUserPubKey(state, userPubKey) {
+    state.userPubKey = userPubKey
+  },
+  setDelegatedCredentials(state, { delegatedCredential }) {
+    console.log('commiting: :>> ', { delegatedCredential })
+    state.delegatedCredential = delegatedCredential
+  },
+  setILiked(state, { like }) {
+    const { jamId, timestamp, isLiked } = like
+    const idx = state.jams.findIndex((jam) => jam.$id === jamId)
+    state.jams[idx].iLiked.isLiked = isLiked
+    state.jams[idx].iLiked.timestamp = timestamp
+  },
+  setFollowing(state, { jammerId, isFollowing }) {
+    Vue.set(state.follows, jammerId, isFollowing)
+  },
+  setJams(state, jams) {
+    state.jams = jams
+  },
+  setLikes(state, { jamId, likes }) {
+    console.log('state.jams :>> ', state.jams)
+    const idx = state.jams.findIndex((jam) => {
+      return jam.$id === jamId
+    })
+    console.log('state.jams[idx] :>> ', state.jams[idx])
+    state.jams[idx].likes = likes
+  },
+  setOnboardText(state, text) {
+    state.onboardText = text
+  },
+  setOnboardType(state, type) {
+    state.onboardType = type
+  },
+  setNameValid(state, isValid) {
+    state.name.isValid = isValid
+  },
+  setName(state, name) {
+    state.name.label = name
+  },
+  setUidPin(state, uidPin) {
+    state.name.uidPin = uidPin
+  },
+  setUserId(state, userId) {
+    state.name.userId = userId
+  },
+  setUserIdentityId(state, identityId) {
+    state.name.identityId = identityId
+  },
+  setSnackBar(state, snackbar) {
+    state.snackbar = snackbar
+  },
   clearClientErrors(state) {
     state.clientErrorMsg = ''
     state.isClientError = false
     state.isSyncing = false
   },
-  setClientErrors(state, msg) {
-    state.clientErrorMsg = msg
-    state.isClientError = true
-    state.isSyncing = false
-  },
-  setSyncing(state, isSyncing) {
-    state.isSyncing = isSyncing
-  },
-  setLoginPin(state) {
-    const random_num = new Uint8Array(6) // 2048 = number length in bits
-    console.log(random_num)
-    const bytes = window.crypto.getRandomValues(random_num)
-    state.loginPin = bytes.join('').slice(0, 6)
-  },
-  setLoginPinTimeLeft(state, ms) {
-    state.loginPinTimeLeft = ms
-  },
-  setLastDoc(state, doc) {
-    state.wdsLastDoc = doc
-  },
-  setSnackBar(state, snackbar) {
-    state.snackbar = snackbar
-  },
-  setMnemonic(state, mnemonic) {
-    state.mnemonic = mnemonic
-  },
-
-  setIdentity(state, identityId) {
-    state.identityId = identityId
-  },
-  setName(state, name) {
-    state.name.label = name
-    state.name.isRegistered = false
-  },
-  setNameRegistered(state, isRegistered) {
-    state.name.isRegistered = isRegistered
-  },
-  setNameValid(state, isValid) {
-    state.name.isValid = isValid
-  },
-
-  setNameDocId(state, docId) {
-    state.name.docId = docId
-  }
 }
 export const actions = {
-  verifyAppRequest({ state }, appRequest) {
-    const { loginPin } = state
-    const senderPublicKey = 'Ag/YNnbAfG0IpNeH4pfMzgqIsgooR36s5MzzYJV76TpO' // TODO derive from dash identity
+  async encryptRequestPin({ state }) {
+    const { uidPin, tmpPrivKey, identityId } = state.name
 
-    const curIdentityPrivKey = client.account.getIdentityHDKey(0, 'user')
-      .privateKey
+    const userIdentity = await cachedOrGetIdentity(client, identityId)
+    const userPubKey = userIdentity.publicKeys[0].data
 
-    const plainUID_PIN = state.wdsVendorId.concat(
-      state.name.docId,
-      loginPin.toString()
-    )
-    const hashedAndEncryptedUID_PIN = appRequest.data.uid_pin
-
-    const decryptedUID_PIN = DashmachineCrypto.decrypt(
-      curIdentityPrivKey,
-      hashedAndEncryptedUID_PIN,
-      senderPublicKey
-    ).data
-    const verified = DashmachineCrypto.verify(plainUID_PIN, decryptedUID_PIN)
-    console.log({ appRequest }, 'pin verified?', verified)
-
-    return verified
+    return encrypt(tmpPrivKey, uidPin, userPubKey)
   },
-  async approveAppRequest({ state }, appDoc) {
-    const { loginPin } = state
-    const curIdentityPrivKey = client.account.getIdentityHDKey(0, 'user')
-      .privateKey
-    console.log('curIdentityPrivKey', curIdentityPrivKey.toString())
+  async onboard({ state, getters, dispatch }) {
+    switch (state.onboardType) {
+      case 'signup':
+        await dispatch('signupRequest', {})
+        break
+      case 'login':
+        await dispatch('delegatedCredentialsRequest', {})
+        break
 
-    const senderPublicKey = 'Ag/YNnbAfG0IpNeH4pfMzgqIsgooR36s5MzzYJV76TpO' // TODO derive from dash identity
-
-    // reference: Vendor userID (Reference)
-    // //CW decrypts the nonce
-    const encryptedNonce = appDoc.data.nonce
-    console.log('encryptedNonce', encryptedNonce)
-    const decryptedNonce = DashmachineCrypto.decrypt(
-      curIdentityPrivKey,
-      encryptedNonce,
-      senderPublicKey
-    ).data
-    console.log('decrypted nonce:', decryptedNonce)
-    // vid_pin: Encrypted Hash of [Vendor nonce + Vendor userID + CW Pin)
-    const plainVID_PIN = decryptedNonce.concat(
-      state.wdsVendorId,
-      loginPin.toString()
-    )
-    console.log('plainVID_PIN', plainVID_PIN)
-    // hash then encrypt for the vendors PK
-    const hashedVID_PIN = DashmachineCrypto.hash(plainVID_PIN).data
-    console.log('hashedVID_PIN', hashedVID_PIN)
-    const encryptedVID_PIN = DashmachineCrypto.encrypt(
-      curIdentityPrivKey,
-      hashedVID_PIN,
-      senderPublicKey
-    ).data
-    console.log('encryptedVID_PIN', encryptedVID_PIN)
-
-    // status: Encrypted [status+entropy] (0 = valid)
-    const statusCode = 0
-    const status = statusCode
-      .toString()
-      .concat(DashmachineCrypto.generateEntropy())
-    console.log('status', status)
-    const encryptedStatus = DashmachineCrypto.encrypt(
-      curIdentityPrivKey,
-      status,
-      senderPublicKey
-    ).data
-    console.log('encryptedStatus', encryptedStatus)
-
-    // LoginResponse DocData
-    const loginResponseDocOpts = {
-      reference: state.wdsVendorId,
-      vid_pin: encryptedVID_PIN,
-      status: encryptedStatus,
-      temp_timestamp: appDoc.data.temp_timestamp
+      default:
+        break
     }
-    console.log('loginResponseDocOpts')
-    console.dir(loginResponseDocOpts)
-
-    const userIdentity = await client.platform.identities.get(state.identityId)
-    const loginResponseDocument = await client.platform.documents.create(
-      'wdsContract.TweetResponse',
-      userIdentity,
-      loginResponseDocOpts
-    )
-    console.log('loginReponse doc:')
-    console.dir(loginResponseDocument)
-    const documentBatch = {
-      create: [loginResponseDocument],
-      replace: [],
-      delete: []
-    }
-
-    const submitStatus = await client.platform.documents.broadcast(
-      documentBatch,
-      userIdentity
-    )
-    console.log(submitStatus)
   },
-  freshLoginPins({ commit, state }) {
-    if (loginPinInterval) clearInterval(loginPinInterval)
-    commit('setLoginPin')
+  // eslint-disable-next-line no-unused-vars
+  setILikedIfRecent({ commit, state }, { like }) {
+    const { jamId, timestamp } = like
+    const idx = state.jams.findIndex((jam) => {
+      return jam.$id === jamId
+    })
 
-    const refreshInterval = 300000
-    loginPinInterval = setInterval(function() {
-      if (state.loginPinTimeLeft < 1) {
-        commit('setLoginPin')
-        commit('setLoginPinTimeLeft', refreshInterval)
-      } else {
-        commit('setLoginPinTimeLeft', state.loginPinTimeLeft - 1000)
+    console.log('state.jams :>> ', state.jams)
+    console.log('idx :>> ', idx)
+    console.log('state.jams[idx] :>> ', state.jams[idx])
+    const iLikedBefore = state.jams[idx].iLiked
+    if (timestamp > iLikedBefore.timestamp) {
+      commit('setILiked', { like })
+    }
+  },
+  // eslint-disable-next-line no-unused-vars
+  async sendJam({ dispatch, state }, jamText) {
+    console.log('jamText :>> ', jamText)
+    const doc = {
+      text: jamText,
+      userId: state.name.userId,
+      timestamp: Math.floor(Date.now() / 1000),
+    }
+    await dispatch('submitDocument', { type: 'jams', doc })
+  },
+  async likeJam({ dispatch, state }, { jamId, isLiked = true }) {
+    const like = {
+      jamId,
+      isLiked,
+      userId: state.name.userId,
+      timestamp: Math.floor(Date.now() / 1000),
+    }
+    console.log(JSON.stringify(like))
+    await dispatch('submitDocument', { type: 'likes', doc: like })
+  },
+  async followJammer(
+    { dispatch, state, commit },
+    { jammerId, isFollowing = true }
+  ) {
+    const follow = {
+      jammerId,
+      isFollowing,
+      userId: state.name.userId,
+      timestamp: Math.floor(Date.now() / 1000),
+    }
+    console.log(JSON.stringify(follow))
+    await dispatch('submitDocument', { type: 'follows', doc: follow })
+    await commit('setFollowing', { jammerId, isFollowing })
+  },
+  // eslint-disable-next-line no-unused-vars
+  async sendDash({ dispatch, state }, { amount }) {
+    const encUidPin = await dispatch('encryptRequestPin')
+
+    const tip = {
+      uidPin: encUidPin,
+      dappName: $dappName,
+      satoshis: parseInt(amount).toString(), // MUST DO use dashcore to btc -> satoshis, FUTURE will be integer
+      toAddress: 'yUADixXnWbrUD9PxUXFYUMwkMZxZH4u3hZ', // MUST DO resolve jamId -> jammerId -> identity -> publickey -> address
+      contractId: client.apps.jembe.contractId,
+      accountDocId: state.name.userId, // FUTURE Userid
+      unixTimestamp: timestamp(),
+    }
+    await dispatch('submitDocument', {
+      contract: 'primitives',
+      type: 'PaymentRequest',
+      doc: tip,
+    })
+  },
+  async signupRequest({ dispatch, state }, { isRegistered = true }) {
+    const payload = {
+      Signup: {
+        dappIcon: $dappIcon,
+        dappName: $dappName,
+        contractId: client.apps.jembe.contractId,
+        accountDocId: state.name.userId,
+        isRegistered,
+        unixTimestamp: Math.floor(Date.now() / 1000),
+      },
+    }
+    await dispatch('documentActionRequest', {
+      payload,
+    })
+  },
+  async delegatedCredentialsRequest({ dispatch }) {
+    const payload = {
+      DelegatedCredentials: {
+        delegateIdentityId: '$fill', // Filled by PW
+        pubKey: '$fill', // Filled by PW
+        encPvtKey: '$fill', // Filled by PW
+        unixTimestampExpiration: 0, // Filled by PW
+      },
+    }
+    // TODO should be it's own request type
+    await dispatch('documentActionRequest', {
+      payload,
+    })
+  },
+  // eslint-disable-next-line no-unused-vars
+  async documentActionRequest(
+    { dispatch, state },
+    { action = 'create', payload }
+  ) {
+    const encUidPin = await dispatch('encryptRequestPin')
+
+    console.log(encUidPin.data)
+    const doc = {
+      action,
+      uidPin: encUidPin.data,
+      dappName: $dappName,
+      contractId: client.apps.jembe.contractId,
+      accountDocId: state.name.userId,
+      JSONDocString: JSON.stringify(JSON.stringify(payload)).slice(1, -1),
+      unixTimestamp: timestamp(),
+    }
+    // MUST DO check for valid json payload
+    await dispatch('submitDocument', {
+      contract: 'primitives',
+      type: 'DocumentActionRequest',
+      doc,
+    })
+  },
+  // eslint-disable-next-line no-unused-vars
+  async fetchJams({ dispatch, commit }, { orderBy = undefined }) {
+    console.log('fetchJams()')
+    console.log('orderBy :>> ', orderBy)
+    const queryOpts = {
+      startAt: 1,
+      limit: 100,
+      orderBy,
+    }
+    console.log('queryOpts :>> ', queryOpts)
+
+    const result = await dispatch('queryDocuments', {
+      dappName: 'jembe',
+      typeLocator: 'jams',
+      queryOpts,
+    })
+    const jams = result.map((jam) => {
+      return {
+        ...jam.toJSON(),
+        likes: '?',
+        iLiked: { isLiked: false, timestamp: 0 },
       }
-    }, 1000)
+    })
+
+    commit('setJams', jams)
+  },
+  async refreshLikesInState({ dispatch, getters }) {
+    const jams = getters.getJams
+    await Promise.all(
+      jams.map(async (jam) => {
+        const jamId = jam.$id
+        console.log('jamId :>> ', jamId)
+        const likes = await dispatch('countLikes', { jamId })
+        console.log('jamLikes :>> ', likes)
+      })
+    )
+  },
+  // eslint-disable-next-line no-unused-vars
+  async countLikes({ dispatch, commit, state }, { jamId, likes = 0 }) {
+    // Recursive, async fun !
+    console.log('countLikes() on page')
+
+    const limit = 100
+    const startAt = likes + 1
+
+    const queryOpts = {
+      startAt,
+      limit,
+      orderBy: [['timestamp', 'desc']],
+      where: [['jamId', '==', jamId]],
+    }
+
+    const result = await dispatch('queryDocuments', {
+      dappName: 'jembe',
+      typeLocator: 'likes',
+      queryOpts,
+    })
+
+    // Find my own likes and save the isLike true|false state for most recent document
+    result.forEach(async (like) => {
+      like = like.toJSON()
+      console.log('like.userId :>> ', like.userId)
+      console.log('state.name.userId :>> ', state.name.userId)
+      if (like.userId === state.name.userId) {
+        await dispatch('setILikedIfRecent', { like })
+      }
+    })
+
+    // Get the count (array.length) of the 'like' docs, sorted by timestamp
+    console.log('result :>> ', result)
+    const liked = result.filter((jam) => jam.toJSON().isLiked === true).length
+    const notLiked = result.filter((jam) => jam.toJSON().isLiked === false)
+      .length
+    console.log('liked :>> ', liked)
+    console.log('notLiked :>> ', notLiked)
+    const totalLiked = liked - notLiked
+    console.log('totalLiked :>> ', totalLiked)
+    const length = totalLiked
+
+    // Keeping recursive count
+    likes = likes + length
+
+    // This is the recursive function call
+    // Keeping scrolling through the pages until we run out of docs
+    if (length === limit) {
+      likes = await dispatch('countLikes', {
+        jamId,
+        likes,
+      })
+    }
+
+    // We're on page #, this many queries hit the DAPI
+    const page = likes / length + 1
+    console.log({ length, limit, page, likes })
+    commit('setLikes', { jamId, likes })
+    return likes
+  },
+
+  // eslint-disable-next-line no-unused-vars
+  async isSignedUp({ dispatch }, { userId }) {
+    console.log('isSignedUp()', { userId })
+    const queryOpts = {
+      startAt: 1,
+      limit: 1,
+      orderBy: [['unixTimestamp', 'desc']],
+      where: [['accountDocId', '==', userId]],
+    }
+    const dappName = 'primitives'
+    const typeLocator = 'Signup'
+
+    const [result] = await dispatch('queryDocuments', {
+      dappName,
+      typeLocator,
+      queryOpts,
+    })
+
+    console.log('result :>> ', result)
+
+    let isSignedUp
+    if (result) {
+      isSignedUp = result.toJSON().isRegistered
+    } else {
+      isSignedUp = false
+    }
+
+    // commit('setSignups', signupsJSON)
+    console.log({ isSignedUp })
+    console.log('isSignedUp :>> ', isSignedUp)
+    return isSignedUp
+  },
+
+  async getDelegatedCredential({ dispatch }, { userId }) {
+    console.log('getDelegatedCredential()', { userId })
+    const queryOpts = {
+      startAt: 1,
+      limit: 1,
+      orderBy: [['unixTimestampExpiration', 'desc']],
+      where: [['delegateIdentityId', '==', userId]],
+    }
+
+    const dappName = 'primitives'
+    const typeLocator = 'DelegatedCredentials'
+
+    const [result] = await dispatch('queryDocuments', {
+      dappName,
+      typeLocator,
+      queryOpts,
+    })
+
+    console.log('result :>> ', result)
+    // MUST DO decrypt privkey here
+
+    // commit('setSignups', signupsJSON)
+    console.log('delCred :>> ', result)
+    return result ? result.toJSON() : result
+  },
+
+  // eslint-disable-next-line no-unused-vars
+  async submitDocument(
+    // eslint-disable-next-line no-unused-vars
+    { commit, dispatch, state },
+    { contract = 'jembe', type, doc }
+  ) {
+    console.log('submitting document')
+    console.log({ doc })
+    console.log('of type')
+    console.log({ type })
+
+    const { platform } = client
+
+    try {
+      const { identityId } = state
+      console.log({ identityId })
+      const identity = await platform.identities.get(identityId)
+      // const identity = await cachedOrGetIdentity(client, identityId)
+
+      console.log({ identity })
+
+      // Create the note document
+      const document = await platform.documents.create(
+        `${contract}.${type}`,
+        identity,
+        doc
+      )
+      const documentBatch = {
+        // TODO phaseb add delegatedSignatures document and broadcast as batch
+        create: [document],
+        replace: [],
+        delete: [],
+      }
+      console.log('created document:', { document })
+      // Sign and submit the document
+      const result = await platform.documents.broadcast(documentBatch, identity)
+      console.log('result :>> ', result)
+      // commit('addDocument', { identity, document }) // FIXME next under contractId
+    } catch (e) {
+      dispatch('showSnackbar', { text: e.message })
+      console.error('Something went wrong:', e)
+    }
+  },
+  // getCurPubKey() {
+  //   const curIdentityHDKey = client.account.getIdentityHDKey(0, 'user')
+  //   console.log({ publicKeyString: curIdentityHDKey.publicKey.toString() })
+
+  //   const publicKey = curIdentityHDKey.publicKey.toString()
+  //   return publicKey
+  // },
+  async syncDelegatedCredentials({ dispatch, state, commit }) {
+    const dappName = 'primitives'
+    const typeLocator = 'DelegatedCredentials'
+    const queryOpts = {
+      limit: 1,
+      startAt: 1,
+      orderBy: [['unixTimestampExpiration', 'desc']],
+      where: [
+        ['delegateIdentityId', '==', state.identityId],
+        ['unixTimestampExpiration', '>', timestamp()],
+      ],
+    } // TODO need to filter for contractId and userId as well, check for isValid
+
+    const result = await dispatch('queryDocuments', {
+      dappName,
+      typeLocator,
+      queryOpts,
+    })
+    console.log('result :>> ', result)
+    const delegatedCredential = result ? result[0] : undefined
+    console.log('delegatedCredential :>> ', delegatedCredential)
+    commit('setDelegatedCredentials', { delegatedCredential })
+  },
+  async fetchSignups({ dispatch, commit, getters }) {
+    console.log('fetchSignups()')
+    const queryOpts = {
+      startAt: 1,
+      limit: 5, // TODO fix select DISTINCT problem and paginate dApps
+      orderBy: [['unixTimestamp', 'desc']],
+      where: [['accountDocId', '==', getters.curAccountDocId]],
+    }
+    const dappName = 'primitives'
+    const typeLocator = 'Signup'
+
+    const signups = await dispatch('queryDocuments', {
+      dappName,
+      typeLocator,
+      queryOpts,
+    })
+    const signupsJSON = signups.map((signup) => {
+      return signup.toJSON()
+    })
+    console.log({ signupsJSON })
+    commit('setSignups', signupsJSON)
+  },
+
+  async initOrCreateAccount({ commit, dispatch, state }, { mnemonicPin }) {
+    // Get client to isReady state (with existing mnemonic or creating a new one)
+    // Check if we have a balance, if not, get a drip
+    // If Getting a drip, wait via setInterval for balance
+    // +if error or timeout, instruct for manual balance increase // TODO implement wait for balance timeout
+    // Once we have a balance:
+    // (check if we have an identity, if not)
+    // create identity, commit identity
+    // create name, set isRegistered = true // TODO implement recover identity and name from dpp
+    // catch errors at each step and self heal // TODO tests
+    try {
+      console.log('initorcreate, dispatch init')
+      await dispatch('initWallet', { mnemonicPin })
+    } catch (e) {
+      console.dir({ e }, { depth: 5 })
+      let message = e.message
+
+      // FIXME decryptMnemonic clearly needs better error handling
+      if (message === 'Expect mnemonic to be provided') {
+        message = 'You entered the wrong PIN / Password.'
+      }
+      commit('setClientErrors', 'Connecting to Evonet: ' + message)
+    }
+    console.log("I'm done awaiting client.isReady()....")
+
+    const account = await client.wallet.getAccount()
+    const confirmedBalance = account.getConfirmedBalance()
+    console.log('Confirmed Balance: ' + confirmedBalance)
+    if (confirmedBalance > 500000) {
+      if (this.$store.state.identityId === null) {
+        try {
+          this.registerIdentity()
+        } catch (e) {
+          console.log('No success in registering an identity, trying again ...')
+          dispatch('showSnackbar', {
+            text: e.message,
+          })
+          this.registerIdentity()
+        }
+      } else {
+        console.log('Found existing identityId')
+        console.log(this.$store.state.identityId)
+      }
+    } else {
+      try {
+        await dispatch('getMagicInternetMoney')
+        // console.log('not getting a drip, faucet is broken')
+      } catch (e) {
+        console.log('commit error?', e)
+        this.$store.commit(
+          'setClientErrors',
+          e.message +
+            ' | Faucet not responding, manually send some evoDash to ' +
+            this.freshAddress
+        )
+      }
+
+      // TODO need to check if identity belongs to mnemonic
+      if (state.identityId === null) {
+        dispatch('registerIdentityOnceBalance')
+      } else {
+        console.log('Found existing identityId')
+        console.log(state.identityId)
+      }
+    }
+  },
+  resetStateKeepAccounts({ state, commit }) {
+    console.log({ state })
+    console.log(state.accounts)
+    const { accounts } = state
+    console.log({ accounts })
+    const initState = getInitState()
+    console.log({ initState })
+    initState.accounts = accounts
+    console.log({ initState })
+    commit('setState', initState)
+    console.log({ state })
+  },
+  clearSession({ dispatch }) {
+    // TODO refactor intervalls in an object and iterate them in clearAllIntervals()
+    // TODO wrap setInterval and setTimout in setIntervalIfLoggedIn to clear itself if global stat login var is false
+    clearInterval(registerIdentityInterval)
+    clearTimeout(clientTimeout)
+
+    if (client) client.disconnect()
+    dispatch('resetStateKeepAccounts')
+    client = undefined // DANGER Uh oh, we're setting global vars
   },
   showSnackbar({ commit }, { text, color = 'red' }) {
     commit('setSnackBar', { show: true, text, color, time: Date.now() })
   },
-  async initWallet({ state, commit }) {
+  // eslint-disable-next-line no-unused-vars
+  async initWallet({ state, commit, dispatch }) {
     commit('clearClientErrors')
     console.log('Initializing Dash.Client with mnemonic: ')
-    console.log(state.mnemonic)
-
+    console.log('Encrypted mnemonic:', state.mnemonic)
     client = new Dash.Client({
       seeds: [
         { service: 'seed-1.evonet.networks.dash.org' },
         { service: 'seed-2.evonet.networks.dash.org' },
         { service: 'seed-3.evonet.networks.dash.org' },
         { service: 'seed-4.evonet.networks.dash.org' },
-        { service: 'seed-5.evonet.networks.dash.org' }
+        { service: 'seed-5.evonet.networks.dash.org' },
       ],
-      mnemonic: state.mnemonic,
+      wallet: { mnemonic: state.mnemonic },
+      // mnemonic: await dispatch('decryptMnemonic', {
+      //   encMnemonic: state.mnemonic,
+      //   pin: mnemonicPin,
+      // }),
       apps: {
-        wdsContract: { contractId: state.wdsContractId },
-        dpns: {
-          contractId: '7PBvxeGpj7SsWfvDSa31uqEMt58LAiJww7zNcVRP1uEM'
-        }
-      }
+        // dpns: {
+        //   contractId: '7PBvxeGpj7SsWfvDSa31uqEMt58LAiJww7zNcVRP1uEM',
+        // },
+        users: { contractId: '3bhAjxGB5rZ8sTB1nEj1fC6SCZV6c3XEbX8Lm2arVbjA' },
+        primitives: {
+          contractId: 'FtNpnUh4tdUmH6gpusHEToczNMwmf37h79pWkdwXgh6h',
+        },
+        jembe: { contractId: '4gzbZindZD91ehrTRRYVrXJAKq5wLPVtJiSLP71JAgeG' },
+      },
     })
 
-    // Time isReady() since we can't catch timeout errors
-    clientTimeoutIntervall = setInterval(() => {
+    // Timeout isReady() since we can't catch timeout errors
+    clientTimeout = setTimeout(() => {
       commit('setClientErrors', 'Connection to Evonet timed out.')
-    }, 50000)
-    const isReady = await client.isReady()
-    clearInterval(clientTimeoutIntervall)
+    }, 500000) // TODO DEPLOY set sane timeout
+    
+    client.account = await client.wallet.getAccount({ index: 0 })
+    const tmpPrivKey = client.account
+      .getIdentityHDKeyByIndex(0, 0)
+      .privateKey.toString()
+      
+    commit('setTmpPrivKey', tmpPrivKey)
+    
+    clearInterval(clientTimeout)
 
-    console.log({ isReady })
-    commit('setMnemonic', client.wallet.mnemonic)
     console.log({ client })
 
-    const { account } = client
-
-    console.log('init Funding address', account.getUnusedAddress().address)
-    console.log('init Confirmed Balance', account.getConfirmedBalance())
-    console.log('init Unconfirmed Balance', account.getUnconfirmedBalance())
-
-    return client.isReady()
-    // setInterval(function () {
-    //     console.log(account.getTotalBalance())
-    // }, 5000);
+    console.log(
+      'init Funding address',
+      client.account.getUnusedAddress().address
+    )
+    console.log('init Confirmed Balance', client.account.getConfirmedBalance())
+    console.log(
+      'init Unconfirmed Balance',
+      client.account.getUnconfirmedBalance()
+    )
+    commit('setFundingAddress', client.account.getUnusedAddress().address)
   },
   async getMagicInternetMoney() {
     console.log('Awaiting faucet drip..')
-    const address = client.account.getUnusedAddress().address
+    const account = await client.wallet.getAccount()
+    const address = account.getUnusedAddress().address
     console.log('... for address: ' + address)
     try {
-      const req = await this.$axios.get(
-        `https://qetrgbsx30.execute-api.us-west-1.amazonaws.com/stage/?dashAddress=${address}`,
-        { crossdomain: true }
-      )
+      // const req = await this.$axios.get(
+      //   `https://qetrgbsx30.execute-api.us-west-1.amazonaws.com/stage/?dashAddress=${address}`,
+      //   { crossdomain: true }
+      // )
       // const req = await this.$axios.get(`http://localhost:5000/evodrip/us-central1/evofaucet/drip/${address}`)
+      const req = await this.$axios.get(
+        `https://us-central1-evodrip.cloudfunctions.net/evofaucet/drip/${address}`
+      )
       console.log('... faucet dropped.')
       console.log(req)
     } catch (e) {
@@ -324,131 +731,61 @@ export const actions = {
   registerIdentityOnceBalance({ dispatch }) {
     if (registerIdentityInterval) clearInterval(registerIdentityInterval)
 
-    registerIdentityInterval = setInterval(function() {
+    // eslint-disable-next-line no-unused-vars
+    registerIdentityInterval = setInterval(async () => {
+      const account = await client.wallet.getAccount()
       console.log('Waiting for positive balance to register identity..')
-      console.log(client.account.getTotalBalance())
-      console.log(client.account.getConfirmedBalance())
-      console.log(client.account.getUnconfirmedBalance())
-      if (client.account.getConfirmedBalance() > 0) {
+      console.log('init Funding address', account.getUnusedAddress().address)
+      console.log(account.getTotalBalance())
+      console.log(account.getConfirmedBalance())
+      console.log(account.getUnconfirmedBalance())
+      if (account.getConfirmedBalance() > 0) {
         dispatch('registerIdentity')
         clearInterval(registerIdentityInterval)
       }
     }, 5000)
   },
-  async registerNameOnceBalance({ state, dispatch }) {
-    if (registerNameInterval) clearInterval(registerNameInterval)
-    console.log('Awaiting client ..')
-    const clientReady = await client.account.isReady()
-    console.log('..client is ready.', clientReady)
-    if (client.account.getConfirmedBalance() > 10000 && state.identityId) {
-      dispatch('registerName')
-    } else {
-      registerNameInterval = setInterval(function() {
-        console.log('Waiting for positive balance to register name..')
-        console.log(client.account.getConfirmedBalance())
-        if (client.account.getConfirmedBalance() > 10000 && state.identityId) {
-          dispatch('registerName')
-          clearInterval(registerNameInterval)
-        }
-      }, 5000)
-    }
-  },
-  async registerName({ commit, dispatch }) {
-    console.log('Registering Name with identityId: ')
-    console.log(this.state.name.label)
-    console.log(this.state.identityId)
-    const identity = await client.platform.identities.get(this.state.identityId)
-    console.log('Found valid identity:')
-    console.log({ identity })
-
-    console.log('Registering name')
-    try {
-      const createDocument = await client.platform.names.register(
-        this.state.name.label,
-        identity
-      )
-      console.log({ createDocument })
-      const [doc] = await client.platform.documents.get('dpns.domain', {
-        where: [
-          ['normalizedParentDomainName', '==', 'dash'],
-          ['normalizedLabel', '==', this.state.name.label.toLowerCase()]
-        ]
-      })
-      console.log({ doc })
-      commit('setNameRegistered', true)
-      commit('setNameDocId', doc.id)
-      window.$nuxt.$router.push('/actions')
-    } catch (e) {
-      dispatch('showSnackbar', {
-        text: e.message + ' | Choose a new name.'
-      })
-      this.commit('setSyncing', false)
-    }
-  },
   async dashNameExists({ dispatch }, name) {
-    const queryOpts = {
-      where: [
-        ['normalizedParentDomainName', '==', 'dash'],
-        ['normalizedLabel', '==', name.toLowerCase()]
-      ],
-      startAt: 0,
-      limit: 1,
-      orderBy: [['normalizedLabel', 'asc']]
-    }
-    console.log('Checking if name exists on dpns..')
     try {
-      const searchNames = await client.platform.documents.get(
-        'dpns.domain',
-        queryOpts
-      )
-      console.log({ searchNames })
-      console.log(searchNames.length)
-      if (searchNames.length === 1) {
-        return true
-      } else {
-        return false
-      }
+      const doc = await client.platform.names.get(name)
+      return doc ? doc.toJSON() : doc
     } catch (e) {
       dispatch('showSnackbar', { text: e.message })
       console.error('Something went wrong:', e)
     }
   },
-
   async queryDocuments(
-    { dispatch },
+    // eslint-disable-next-line no-unused-vars
+    { dispatch, commit },
     {
-      appName,
+      dappName,
       typeLocator,
       queryOpts = {
         limit: 1,
-        startAt: 0,
-        order: []
-      }
+        startAt: 1,
+      },
     }
   ) {
     console.log('Querying documents...')
-    console.log({ appName, typeLocator, queryOpts })
-    // commit("setSyncing", true);
+    console.log({ dappName, typeLocator, queryOpts })
+    // commit('setSyncing', true)
     try {
-      await client.isReady()
       const documents = await client.platform.documents.get(
-        `${appName}.${typeLocator}`,
+        `${dappName}.${typeLocator}`,
         queryOpts
       )
       console.log({ documents })
       return documents
-      // commit("setDocuments", { contractId, documents });
-      // commit("setSyncing", false);
     } catch (e) {
       dispatch('showSnackbar', { text: e, color: 'red' })
       console.error('Something went wrong:', e)
-      // commit("setSyncing", false);
+    } finally {
+      // commit('setSyncing', false)
     }
   },
   async getContract({ state }) {
-    await client.isReady()
     const contract = await client.platform.contracts.get(state.wdsContractId)
     console.log({ contract })
     return contract
-  }
+  },
 }

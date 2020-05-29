@@ -4,7 +4,7 @@ import colors from 'vuetify/es5/util/colors'
 export default {
   mode: 'spa',
   router: {
-    mode: 'hash'
+    mode: 'hash',
   },
   pwa: {
     manifest: {
@@ -15,8 +15,8 @@ export default {
       background_color: '#008de4',
       theme_color: '#787878',
       display: 'standalone',
-      orientation: 'portrait-primary'
-    }
+      orientation: 'portrait-primary',
+    },
   },
 
   /*
@@ -31,17 +31,17 @@ export default {
       {
         hid: 'description',
         name: 'description',
-        content: process.env.npm_package_description || ''
-      }
+        content: process.env.npm_package_description || '',
+      },
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       {
         rel: 'stylesheet',
         href:
-          'https://fonts.googleapis.com/css2?family=Montserrat&family=Open+Sans&family=Roboto&display=swap'
-      }
-    ]
+          'https://fonts.googleapis.com/css2?family=Montserrat&family=Open+Sans&family=Roboto&display=swap',
+      },
+    ],
   },
   /*
    ** Customize the progress-bar color
@@ -54,7 +54,7 @@ export default {
   /*
    ** Plugins to load before mounting the App
    */
-  plugins: [],
+  plugins: [{ src: '~/plugins/timeago.js' }],
 
   // TODO enable plugin: { src: '~/plugins/localStorage.js', ssr: false }
   /*
@@ -63,7 +63,7 @@ export default {
   buildModules: [
     // Doc: https://github.com/nuxt-community/eslint-module
     '@nuxtjs/eslint-module',
-    '@nuxtjs/vuetify'
+    '@nuxtjs/vuetify',
   ],
   /*
    ** Nuxt.js modules
@@ -71,7 +71,7 @@ export default {
   modules: [
     // Doc: https://axios.nuxtjs.org/usage
     '@nuxtjs/axios',
-    '@nuxtjs/pwa'
+    '@nuxtjs/pwa',
   ],
   /*
    ** Axios module configuration
@@ -97,7 +97,7 @@ export default {
       //     success: colors.green.accent3
       //   }
       // }
-    }
+    },
   },
   /*
    ** Build configuration
@@ -107,18 +107,21 @@ export default {
      ** You can extend webpack config here
      */
     extend(config, ctx) {
-      if (ctx.isDev && ctx.isClient) {
-        config.module.rules.push({
-          enforce: 'pre',
-          test: /\.(js|vue)$/,
-          loader: 'eslint-loader',
-          exclude: /(node_modules)/,
-          options: { fix: true }
-        })
+      if (ctx.isDev) {
+        config.devtool = ctx.isClient ? 'source-map' : 'inline-source-map'
       }
+      // if (ctx.isDev && ctx.isClient) {
+      //   config.module.rules.push({
+      //     enforce: 'pre',
+      //     test: /\.(js|vue)$/,
+      //     loader: 'eslint-loader',
+      //     exclude: /(node_modules)/,
+      //     options: { fix: true }
+      //   })
+      // }
       config.node = {
-        fs: 'empty'
+        fs: 'empty',
       }
-    }
-  }
+    },
+  },
 }

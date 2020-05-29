@@ -1,0 +1,144 @@
+{
+  "jams": {
+   "indices": [
+    {
+     "properties": [
+      {
+       "userId": "asc"
+      }
+     ]
+    },
+    {
+     "properties": [
+      {
+       "timestamp": "asc"
+      }
+     ]
+    }
+   ],
+   "required": [
+    "text",
+    "userId",
+    "timestamp"
+   ],
+   "properties": {
+    "text": {
+     "type": "string"
+    },
+    "userId": {
+     "type": "string",
+     "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+     "maxLength": 44,
+     "minLength": 42
+    },
+    "timestamp": {
+     "type": "integer"
+    }
+   },
+   "additionalProperties": false
+  },
+  "likes": {
+   "indices": [
+    {
+     "properties": [
+      {
+       "jamId": "asc"
+      }
+     ]
+    },
+    {
+     "properties": [
+      {
+       "userId": "asc"
+      }
+     ]
+    },
+    {
+     "properties": [
+      {
+       "timestamp": "asc"
+      }
+     ]
+    }
+   ],
+   "required": [
+    "jamId",
+    "userId",
+    "timestamp",
+    "isLiked"
+   ],
+   "properties": {
+    "jamId": {
+     "type": "string",
+     "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+     "maxLength": 44,
+     "minLength": 42
+    },
+    "userId": {
+     "type": "string",
+     "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+     "maxLength": 44,
+     "minLength": 42
+    },
+    "isLiked": {
+     "type": "boolean"
+    },
+    "timestamp": {
+     "type": "integer"
+    }
+   },
+   "additionalProperties": false
+  },
+  "follows": {
+   "indices": [
+    {
+     "properties": [
+      {
+       "jammerId": "asc"
+      }
+     ]
+    },
+    {
+     "properties": [
+      {
+       "userId": "asc"
+      }
+     ]
+    },
+    {
+     "properties": [
+      {
+       "timestamp": "asc"
+      }
+     ]
+    }
+   ],
+   "required": [
+    "userId",
+    "timestamp",
+    "jammerId",
+    "isFollowing"
+   ],
+   "properties": {
+    "userId": {
+     "type": "string",
+     "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+     "maxLength": 44,
+     "minLength": 42
+    },
+    "jammerId": {
+     "type": "string",
+     "pattern": "^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$",
+     "maxLength": 44,
+     "minLength": 42
+    },
+    "timestamp": {
+     "type": "integer"
+    },
+    "isFollowing": {
+     "type": "boolean"
+    }
+   },
+   "additionalProperties": false
+  }
+ }

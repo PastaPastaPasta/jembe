@@ -5,6 +5,6 @@
 import Usercard from '~/components/usercard'
 
 export default {
-  components: { Usercard }
+  components: { Usercard },
 }
 </script>
