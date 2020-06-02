@@ -84,6 +84,7 @@
                 "enum": [
                     "blob",
                     "string",
+                    "uri",
                     "encrypted"
                 ]
             },
