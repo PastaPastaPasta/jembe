@@ -45,10 +45,7 @@
           >
           <span class="subheading mr-2">{{ jam.likes }}</span>
           <span class="mr-1">·</span>
-          <v-icon class="mr-1" @click.stop="tip($vnode.key)"
-            >mdi-bitcoin
-          </v-icon>
-          <span class="subheading mr-2">(duffs)</span>
+          <v-icon class="mr-1" @click.stop="tip($vnode.key)">$dash </v-icon>
           <span class="mr-1">·</span>
           <v-icon class="mr-1">mdi-share-variant</v-icon>
           <span class="subheading">45</span>

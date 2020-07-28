@@ -4,13 +4,13 @@
   </v-container> -->
 
   <v-container fill-height>
-    <v-alert dense outlined color="blue">
+    <!-- <v-alert dense outlined color="blue">
       <div>
         <strong>Heads Up:</strong> There is no working auto-faucet, use the
         faucet or console to send some eDuffs to:
         {{ this.$store.state.fundingAddress }}
       </div>
-    </v-alert>
+    </v-alert> -->
     <Desktop />
   </v-container>
 </template>

@@ -645,13 +645,6 @@ export const actions = {
     console.log('Initializing Dash.Client with mnemonic: ')
     console.log('Encrypted mnemonic:', state.mnemonic)
     client = new Dash.Client({
-      seeds: [
-        { service: 'seed-1.evonet.networks.dash.org' },
-        { service: 'seed-2.evonet.networks.dash.org' },
-        { service: 'seed-3.evonet.networks.dash.org' },
-        { service: 'seed-4.evonet.networks.dash.org' },
-        { service: 'seed-5.evonet.networks.dash.org' },
-      ],
       wallet: { mnemonic: state.mnemonic },
       // mnemonic: await dispatch('decryptMnemonic', {
       //   encMnemonic: state.mnemonic,
@@ -661,11 +654,11 @@ export const actions = {
         // dpns: {
         //   contractId: '7PBvxeGpj7SsWfvDSa31uqEMt58LAiJww7zNcVRP1uEM',
         // },
-        users: { contractId: '3bhAjxGB5rZ8sTB1nEj1fC6SCZV6c3XEbX8Lm2arVbjA' },
+        users: { contractId: 'FKS7RQeK7zQuUAQZ1v5DWtU6q6DiyWNfBBjerigro3JH' },
         primitives: {
-          contractId: 'FtNpnUh4tdUmH6gpusHEToczNMwmf37h79pWkdwXgh6h',
+          contractId: '6HK7gjrt2L4gvKMkCcKm7BzFFPFTAVu6e9XraQNXPA3k',
         },
-        jembe: { contractId: '4gzbZindZD91ehrTRRYVrXJAKq5wLPVtJiSLP71JAgeG' },
+        jembe: { contractId: '5bLpxkjHNALUiT2uA6AzM3BNYRZf8kx1bzSrGe2N2eXK' },
       },
     })
 
@@ -673,14 +666,14 @@ export const actions = {
     clientTimeout = setTimeout(() => {
       commit('setClientErrors', 'Connection to Evonet timed out.')
     }, 500000) // TODO DEPLOY set sane timeout
-    
+
     client.account = await client.wallet.getAccount({ index: 0 })
     const tmpPrivKey = client.account
       .getIdentityHDKeyByIndex(0, 0)
       .privateKey.toString()
-      
+
     commit('setTmpPrivKey', tmpPrivKey)
-    
+
     clearInterval(clientTimeout)
 
     console.log({ client })
@@ -747,7 +740,8 @@ export const actions = {
   },
   async dashNameExists({ dispatch }, name) {
     try {
-      const doc = await client.platform.names.get(name)
+      const doc = await client.platform.names.resolve(name + '.dash')
+      console.log(doc)
       return doc ? doc.toJSON() : doc
     } catch (e) {
       dispatch('showSnackbar', { text: e.message })
